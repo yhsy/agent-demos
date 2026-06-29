@@ -12,6 +12,7 @@
   "volta": {
     "node": "20.20.2"
   },
+  "packageManager": "pnpm@9.15.9",
   "dependencies": {
     "@langchain/openai": "^1.5.3",
     "dotenv": "^17.4.2"
