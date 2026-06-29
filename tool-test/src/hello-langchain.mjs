@@ -7,6 +7,7 @@ config({ path: '.env.local', override: true, quiet: true });
 
 const apiKey = process.env.API_KEY;
 const baseURL = process.env.BASE_URL;
+const modelName = process.env.MODEL_NAME;
 
 if (!apiKey || !baseURL) {
     throw new Error(
@@ -16,7 +17,7 @@ if (!apiKey || !baseURL) {
 }
 
 const model = new ChatOpenAI({
-    model: 'MiniMax-M3',
+    model: modelName,
     apiKey,
     configuration: {
         baseURL,
