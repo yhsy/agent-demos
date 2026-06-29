@@ -1,0 +1,19 @@
+{
+  "name": "tool-test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "volta": {
+    "node": "20.20.2"
+  },
+  "dependencies": {
+    "@langchain/openai": "^1.5.3",
+    "dotenv": "^17.4.2"
+  }
+}
