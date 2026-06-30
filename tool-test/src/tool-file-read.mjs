@@ -76,3 +76,41 @@ console.log(response);
 // 把Ai返回的消息也放到messagess数组，也就是对话记录
 messages.push(response);
 
+while (response.tool_calls && response.tool_calls.length > 0) {
+
+    console.log(`\n[检测到 ${response.tool_calls.length} 个工具调用]`);
+
+    // 执行所有工具调用
+    const toolResults = await Promise.all(
+        response.tool_calls.map(async (toolCall) => {
+            const matchedTool = tools.find(t => t.name === toolCall.name);
+            if (!matchedTool) {
+                return `错误: 找不到工具 ${toolCall.name}`;
+            }
+
+            console.log(`  [执行工具] ${toolCall.name}(${JSON.stringify(toolCall.args)})`);
+            try {
+                const result = await matchedTool.invoke(toolCall.args);
+                return result;
+            } catch (error) {
+                return `错误: ${error.message}`;
+            }
+        })
+    );
+
+    // 将工具结果添加到消息历史
+    response.tool_calls.forEach((toolCall, index) => {
+        messages.push(
+            new ToolMessage({
+                content: toolResults[index],
+                tool_call_id: toolCall.id,
+            })
+        );
+    });
+
+    // 再次调用模型，传入工具结果
+    response = await modelWithTools.invoke(messages);
+}
+
+console.log('\n[最终回复]');
+console.log(response.content);
