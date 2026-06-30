@@ -1,6 +1,78 @@
-import 'dotenv/config'
+import { config as loadEnv } from 'dotenv';
 import { ChatOpenAI } from '@langchain/openai'
 import { tool } from '@langchain/core/tools'
-import { HumanMessage, SystemMessage,ToolMessage } from '@langchain/core/messages'
-import fs from  'node:fs/promises'
-import {z} from 'zod'
+import { HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages'
+import fs from 'node:fs/promises'
+import { z } from 'zod'
+
+
+// 先加载 .env，再加载 .env.local（后者优先级更高，便于本地覆盖）
+loadEnv({ path: '.env', quiet: true });
+loadEnv({ path: '.env.local', override: true, quiet: true });
+
+const apiKey = process.env.API_KEY;
+const baseURL = process.env.BASE_URL;
+const modelName = process.env.MODEL_NAME || 'MiniMax-M3';
+
+// 校验关键环境变量，缺了立刻给出明确报错（而不是让底层 OpenAI 客户端抛隐晦错）
+if (!apiKey || !baseURL) {
+    throw new Error(
+        `缺少环境变量：API_KEY=${apiKey ? '已设置' : '未设置'}, BASE_URL=${baseURL ? '已设置' : '未设置'}。` +
+        `请设置环境变量或在 tool-test/.env.local 中配置。`
+    );
+}
+
+// 首先，创建一个模型model
+const model = new ChatOpenAI({
+    model: modelName,
+    apiKey,
+    temperature: 0,
+    timeout: 30000, // 30 秒超时，避免网络问题时无限挂起
+    configuration: {
+        baseURL,
+    },
+});
+
+// 创建一个读取文件的tool
+const readFileTool = tool(
+    async ({ filePath }) => {
+        const content = await fs.readFile(filePath, 'utf-8');
+        console.log(`  [工具调用] read_file("${filePath}") - 成功读取 ${content.length} 字节`);
+        return `文件内容:\n${content}`;
+    },
+    {
+        name: 'read_file',
+        description: '用此工具来读取文件内容。当用户要求读取文件、查看代码、分析文件内容时，调用此工具。输入文件路径（可以是相对路径或绝对路径）。',
+        schema: z.object({
+            filePath: z.string().describe('要读取的文件路径'),
+        }),
+    }
+);
+
+// 调用tool的APi
+const tools = [
+    readFileTool
+];
+
+const modelWithTools = model.bindTools(tools);
+
+const messages = [
+    new SystemMessage(`你是一个代码助手，可以使用工具读取文件并解释代码。
+
+工作流程：
+1. 用户要求读取文件时，立即调用 read_file 工具
+2. 等待工具返回文件内容
+3. 基于文件内容进行分析和解释
+
+可用工具：
+- read_file: 读取文件内容（使用此工具来获取文件内容）
+`),
+    new HumanMessage('请读取 src/tool-file-read.mjs 文件内容并解释代码')
+];
+
+let response = await modelWithTools.invoke(messages);
+console.log(response);
+
+// 把Ai返回的消息也放到messagess数组，也就是对话记录
+messages.push(response);
+
