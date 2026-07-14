@@ -20,7 +20,7 @@ config({ path: join(__dirname, '..', '.env.local'), override: true, quiet: true 
 export function createModel(options = {}) {
     const apiKey = process.env.API_KEY;
     const baseURL = process.env.BASE_URL;
-    const modelName = process.env.MODEL_NAME || 'MiniMax-M3';
+    const modelName = process.env.MODEL_NAME || 'agnes-2.0-flash';
 
     if (!apiKey || !baseURL) {
         throw new Error(
