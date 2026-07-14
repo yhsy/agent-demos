@@ -1,43 +1,25 @@
-import { config as loadEnv } from 'dotenv';
-import { ChatOpenAI } from '@langchain/openai'
+import { fileURLToPath } from 'url';
+import { dirname, join, isAbsolute } from 'path';
+import { createModel } from './llm.mjs';
 import { tool } from '@langchain/core/tools'
 import { HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages'
 import fs from 'node:fs/promises'
 import { z } from 'zod'
 
-
-// 先加载 .env，再加载 .env.local（后者优先级更高，便于本地覆盖）
-loadEnv({ path: '.env', quiet: true });
-loadEnv({ path: '.env.local', override: true, quiet: true });
-
-const apiKey = process.env.API_KEY;
-const baseURL = process.env.BASE_URL;
-const modelName = process.env.MODEL_NAME || 'MiniMax-M3';
-
-// 校验关键环境变量，缺了立刻给出明确报错（而不是让底层 OpenAI 客户端抛隐晦错）
-if (!apiKey || !baseURL) {
-    throw new Error(
-        `缺少环境变量：API_KEY=${apiKey ? '已设置' : '未设置'}, BASE_URL=${baseURL ? '已设置' : '未设置'}。` +
-        `请设置环境变量或在 tool-test/.env.local 中配置。`
-    );
-}
+const __dirname = dirname(fileURLToPath(import.meta.url));
+// 项目根目录（tool-test/），相对路径统一基于此解析，避免受运行时工作目录影响
+const projectRoot = join(__dirname, '..');
 
 // 首先，创建一个模型model
-const model = new ChatOpenAI({
-    model: modelName,
-    apiKey,
-    temperature: 0,
-    timeout: 30000, // 30 秒超时，避免网络问题时无限挂起
-    configuration: {
-        baseURL,
-    },
-});
+const model = createModel();
 
 // 创建一个读取文件的tool
 const readFileTool = tool(
     async ({ filePath }) => {
-        const content = await fs.readFile(filePath, 'utf-8');
-        console.log(`  [工具调用] read_file("${filePath}") - 成功读取 ${content.length} 字节`);
+        // 相对路径基于项目根目录解析，绝对路径直接使用
+        const resolvedPath = isAbsolute(filePath) ? filePath : join(projectRoot, filePath);
+        const content = await fs.readFile(resolvedPath, 'utf-8');
+        console.log(`  [工具调用] read_file("${filePath}") -> ${resolvedPath} - 成功读取 ${content.length} 字节`);
         return `文件内容:\n${content}`;
     },
     {
@@ -78,22 +60,22 @@ messages.push(response);
 
 while (response.tool_calls && response.tool_calls.length > 0) {
 
-    console.log(`\n[检测到 ${response.tool_calls.length} 个工具调用]`);
+    console.log(`\n[检测到 ${response.tool_calls.length} 个工具调用]`);
 
     // 执行所有工具调用
     const toolResults = await Promise.all(
         response.tool_calls.map(async (toolCall) => {
             const matchedTool = tools.find(t => t.name === toolCall.name);
             if (!matchedTool) {
-                return `错误: 找不到工具 ${toolCall.name}`;
+                return `错误: 找不到工具 ${toolCall.name}`;
             }
 
-            console.log(`  [执行工具] ${toolCall.name}(${JSON.stringify(toolCall.args)})`);
+            console.log(`  [执行工具] ${toolCall.name}(${JSON.stringify(toolCall.args)})`);
             try {
                 const result = await matchedTool.invoke(toolCall.args);
                 return result;
             } catch (error) {
-                return `错误: ${error.message}`;
+                return `错误: ${error.message}`;
             }
         })
     );
