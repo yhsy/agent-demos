@@ -1,41 +1,56 @@
 # tool-test
 
-一个最小化的 LangChain 调用示例工程，用于验证 `MiniMax-M3` 大模型的连通性与环境配置。
+一个 **LangChain 学习工程**，用一系列由浅入深的独立案例，演示如何接入并调用 OpenAI 协议兼容的大模型。
 
 ## 项目简介
 
-通过 `@langchain/openai` 接入 OpenAI 协议兼容的第三方大模型（`MiniMax-M3`），演示从环境变量加载、模型实例化到单轮对话的完整链路。
+通过 `@langchain/openai` 接入 OpenAI 协议兼容的第三方大模型，从环境变量加载、模型实例化，到单轮对话、工具调用等逐步进阶。每个案例都是一个可独立运行的 demo，并配有一份学习笔记。
 
 ## 文件结构
 
 ```
 tool-test/
+├── AGENTS.md                # 给 AI 协作者 / 贡献者的项目约定
+├── Readme.md                # 本文档
+├── package.json             # 依赖与包管理器配置
+├── pnpm-lock.yaml           # 依赖锁文件
+├── .env / .env.local        # 环境变量（勿提交敏感值；.env.local 优先级更高）
 ├── src/
-│   └── hello-langchain.mjs   # 主脚本：加载环境变量、调用 MiniMax-M3 模型并打印回复
-├── package.json              # 项目配置：声明依赖与包管理器
-├── pnpm-lock.yaml            # pnpm 依赖锁文件，锁定依赖版本
-├── .env.local                # 本地环境变量（API_KEY、BASE_URL），优先级高于 .env
-└── Readme.md                 # 本文档
+│   ├── llm.mjs              # 公共模块：加载配置 + 创建模型（createModel）
+│   └── cases/               # 案例 demo（按编号，由浅入深）
+│       ├── 01-hello-langchain.mjs   # 案例 01：单轮对话最小闭环
+│       └── 02-tool-file-read.mjs    # 案例 02：工具调用（Tool Calling）
+└── docs/                     # 配套学习笔记
+    ├── overview.md          # 案例总览与学习路线图（建议从这里开始）
+    ├── 01-hello-langchain.md
+    ├── 02-tool-file-read.md
+    └── 02-tool-file-read.output.md  # 案例 02 运行样例存档
 ```
 
-## 文件作用说明
+## 案例一览
 
-| 文件 | 作用 |
-| --- | --- |
-| `src/hello-langchain.mjs` | 主入口脚本。使用 `dotenv` 加载环境变量，创建 `ChatOpenAI` 客户端（模型 `MiniMax-M3`，自定义 `baseURL`），向模型发送 `"请介绍下你自己?"` 并打印回复内容。 |
-| `package.json` | 声明项目名称、依赖（`@langchain/openai`、`dotenv`）以及包管理器（`pnpm@9.15.9`），并通过 `volta` 固定 Node 版本为 `20.20.2`。 |
-| `pnpm-lock.yaml` | pnpm 生成的依赖锁定文件，确保团队/CI 环境安装的依赖版本一致。 |
-| `.env.local` | 本地环境变量配置文件，包含 `API_KEY` 与 `BASE_URL`，优先级最高，会覆盖 `.env` 中的同名变量，便于本地调试。 |
-| `Readme.md` | 项目说明文档（本文件）。 |
+| 编号 | 案例 | 知识点 | 笔记 |
+|------|------|--------|------|
+| 01 | hello-langchain | 单轮对话：`createModel` / `invoke` / `content` | [docs/01-hello-langchain.md](./docs/01-hello-langchain.md) |
+| 02 | tool-file-read | 工具调用：`tool()` / `bindTools` / `tool_calls` 循环 | [docs/02-tool-file-read.md](./docs/02-tool-file-read.md) |
+
+> 更多规划中的案例（多轮对话、流式输出、结构化输出、多工具 Agent）见 [docs/overview.md](./docs/overview.md)。
+
+## 核心设计
+
+- **公共模块复用**：「加载配置 + 创建模型」统一走 `src/llm.mjs` 的 `createModel()`，案例本身只关注要演示的知识点。
+- **配置按脚本位置加载**：`.env` 的定位基于脚本文件位置，从任意目录运行都可用。
+- **编号命名**：demo 与笔记一一对应，用两位数编号标明学习顺序。
 
 ## 环境变量
 
-运行前需配置以下环境变量（建议放在 `.env.local` 中）：
+运行前需配置以下环境变量（建议放在 `tool-test/.env` 或 `.env.local`）：
 
 - `API_KEY`：模型服务的访问密钥。
 - `BASE_URL`：模型服务的网关地址（OpenAI 协议兼容）。
+- `MODEL_NAME`：模型名称（可选，`llm.mjs` 内有兜底默认值）。
 
-加载顺序：先读取 `.env`，再用 `.env.local` 覆盖，因此 `.env.local` 中的值会优先生效。
+加载顺序：先读取 `.env`，再用 `.env.local` 覆盖，因此 `.env.local` 中的值优先生效。
 
 ## 运行方式
 
@@ -43,8 +58,11 @@ tool-test/
 # 安装依赖
 pnpm install
 
-# 执行脚本
-node src/hello-langchain.mjs
+# 运行指定案例（从项目根目录）
+node src/cases/01-hello-langchain.mjs
+node src/cases/02-tool-file-read.mjs
 ```
 
-执行成功后，终端会打印 `MiniMax-M3` 模型对"请介绍下你自己?"的回复内容。
+## 贡献 / 协作
+
+新增案例或修改代码前，请先阅读 [AGENTS.md](./AGENTS.md) 与 [docs/overview.md](./docs/overview.md)，遵循「编号命名 + 复用 `createModel()` + 配套笔记」的约定。

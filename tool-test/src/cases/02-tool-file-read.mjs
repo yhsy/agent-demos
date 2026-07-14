@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'url';
 import { dirname, join, isAbsolute } from 'path';
-import { createModel } from './llm.mjs';
+import { createModel } from '../llm.mjs';
 import { tool } from '@langchain/core/tools'
 import { HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages'
 import fs from 'node:fs/promises'
@@ -8,7 +8,8 @@ import { z } from 'zod'
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // 项目根目录（tool-test/），相对路径统一基于此解析，避免受运行时工作目录影响
-const projectRoot = join(__dirname, '..');
+// 本文件位于 src/cases/，需回退两级
+const projectRoot = join(__dirname, '..', '..');
 
 // 首先，创建一个模型model
 const model = createModel();
@@ -49,7 +50,7 @@ const messages = [
 可用工具：
 - read_file: 读取文件内容（使用此工具来获取文件内容）
 `),
-    new HumanMessage('请读取 src/tool-file-read.mjs 文件内容并解释代码')
+    new HumanMessage('请读取 src/cases/02-tool-file-read.mjs 文件内容并解释代码')
 ];
 
 let response = await modelWithTools.invoke(messages);
