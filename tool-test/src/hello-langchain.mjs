@@ -1,7 +1,11 @@
-import { createModel } from './llm.mjs';
+// 配置大模型
+import { createModel } from "./llm.mjs";
 
+// 创建大模型
 const model = createModel();
 
-const response = await model.invoke("请介绍下你自己?");
+// 调用大模型
+const res = await model.invoke('你好，请问你是什么大模型？你能做哪些事情？');
 
-console.log(response.content);
+// 输出大模型返回的内容
+console.log(`res===>>>${res.content}`)
